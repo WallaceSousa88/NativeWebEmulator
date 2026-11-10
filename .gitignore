@@ -1,0 +1,76 @@
+# ==============================================================================
+# Rust / Cargo
+# ==============================================================================
+# Diretório de compilação do Cargo (pesado: centenas de MBs/GBs)
+target/
+**/target/
+
+# Backups do rustfmt / cargo
+**/*.rs.bk
+
+# ==============================================================================
+# Node.js / Vite / Web
+# ==============================================================================
+# Dependências do npm/pnpm/yarn (muito pesado)
+node_modules/
+**/node_modules/
+
+# Builds finais de produção do Vite
+dist/
+**/dist/
+dist-ssr/
+.vite/
+
+# Variáveis de ambiente locais
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==============================================================================
+# Artefatos Gerados (Wasm)
+# ==============================================================================
+# Binários Wasm gerados a partir do código Rust
+web/public/wasm/*.wasm
+
+# ==============================================================================
+# ROMs, BIOS e Saves (Arquivos binários e direitos autorais)
+# ==============================================================================
+roms/
+bios/
+saves/
+states/
+*.sfc
+*.smc
+*.bin
+*.gen
+*.smd
+*.iso
+*.cue
+*.chd
+*.srm
+*.sav
+
+# ==============================================================================
+# Sistema Operacional e IDEs
+# ==============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.idea/
+*.swp
+*.swo
+
+# VS Code (ignora cache/histórico, mas preserva configurações recomendadas se houver)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/extensions.json

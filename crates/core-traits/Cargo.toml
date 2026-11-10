@@ -1,0 +1,7 @@
+[package]
+name = "core-traits"
+version = "0.1.0"
+edition = "2021"
+description = "Core traits and interfaces for NativeWebEmulator engines"
+
+[dependencies]

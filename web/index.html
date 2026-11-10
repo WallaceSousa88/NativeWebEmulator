@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NativeWebEmulator - Step 0 Pipeline</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="logo">
+          <span class="logo-icon">⚡</span>
+          <h1>NativeWebEmulator <span class="tag">Step 0 • Rust Wasm + WebGL2</span></h1>
+        </div>
+        <div class="header-badges">
+          <span class="badge badge-purple">SNES Native Res (256x224)</span>
+          <span class="badge badge-green" id="fps-badge">60.0 FPS</span>
+        </div>
+      </header>
+
+      <main class="main-container">
+        <div class="viewport-card">
+          <div class="canvas-wrapper" id="canvas-container">
+            <canvas id="emulator-canvas" width="256" height="224"></canvas>
+            <div id="audio-overlay" class="audio-overlay">
+              <button id="btn-start-audio" class="btn btn-primary">
+                🔊 Clique para Iniciar Áudio & Ativar Loop
+              </button>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button id="btn-toggle-crt" class="btn btn-secondary">
+              📺 CRT Shader: <strong id="crt-status">LIGADO</strong>
+            </button>
+            <button id="btn-toggle-audio" class="btn btn-secondary">
+              🔊 Áudio: <strong id="audio-status">MUTADO</strong>
+            </button>
+            <button id="btn-fullscreen" class="btn btn-secondary">
+              ⛶ Tela Cheia
+            </button>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="panel">
+            <h3>📊 Telemetria de Desempenho</h3>
+            <div class="metrics-grid">
+              <div class="metric">
+                <span class="label">Taxa de Quadros:</span>
+                <span class="value" id="val-fps">60.0 FPS</span>
+              </div>
+              <div class="metric">
+                <span class="label">Tempo de Frame (Total):</span>
+                <span class="value" id="val-frametime">16.6 ms</span>
+              </div>
+              <div class="metric">
+                <span class="label">Tempo Wasm Core:</span>
+                <span class="value highlight" id="val-wasmtime">0.15 ms</span>
+              </div>
+              <div class="metric">
+                <span class="label">Alocações GC / Frame:</span>
+                <span class="value success">0 bytes (Zero-Copy)</span>
+              </div>
+              <div class="metric">
+                <span class="label">Wasm Heap Buffer:</span>
+                <span class="value" id="val-wasmmem">1.1 MB</span>
+              </div>
+              <div class="metric">
+                <span class="label">Dispositivo de Entrada:</span>
+                <span class="value" id="val-input-device">Teclado</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>🎮 Controles de Validação (Step 0)</h3>
+            <p class="desc">
+              O Wasm processa os botões em tempo real, alterando a cor/posição da sprite e a frequência do oscilador de áudio no AudioWorklet:
+            </p>
+            <ul class="control-list">
+              <li><kbd>Setas</kbd> / <kbd>W A S D</kbd> : Mover Sprite (D-Pad)</li>
+              <li><kbd>X</kbd> / <kbd>L</kbd> : Botão A (Verde / 880 Hz)</li>
+              <li><kbd>Z</kbd> / <kbd>K</kbd> : Botão B (Vermelho / Turbo / 587 Hz)</li>
+              <li><kbd>C</kbd> / <kbd>I</kbd> : Botão Y (Amarelo / 523 Hz)</li>
+              <li><kbd>V</kbd> / <kbd>O</kbd> : Botão X (Roxo / 659 Hz)</li>
+              <li><span class="tag-sm">Gamepad USB/BT</span> : Mapeamento SNES automático</li>
+            </ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

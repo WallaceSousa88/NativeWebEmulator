@@ -1,0 +1,14 @@
+{
+  "name": "native-web-emulator-root",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "100% Client-side Retro Console Emulation Ecosystem in WebAssembly and WebGL",
+  "scripts": {
+    "build:wasm": "cargo build --target wasm32-unknown-unknown --release && node scripts/copy-wasm.js",
+    "dev": "npm --prefix web run dev",
+    "build:web": "npm --prefix web run build",
+    "build": "npm run build:wasm && npm run build:web",
+    "preview": "npm --prefix web run preview"
+  }
+}
