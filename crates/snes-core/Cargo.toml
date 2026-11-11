@@ -1,0 +1,11 @@
+[package]
+name = "snes-core"
+version = "0.1.0"
+edition = "2021"
+description = "Super Nintendo Entertainment System (SNES) Emulation Core in Rust/Wasm"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+core-traits = { path = "../core-traits" }

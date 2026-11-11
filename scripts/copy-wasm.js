@@ -3,18 +3,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const source = path.resolve(__dirname, '../target/wasm32-unknown-unknown/release/step0_mock_core.wasm');
+const targetDir = path.resolve(__dirname, '../target/wasm32-unknown-unknown/release');
 const destDir = path.resolve(__dirname, '../web/public/wasm');
-const destination = path.join(destDir, 'step0_mock_core.wasm');
 
 if (!fs.existsSync(destDir)) {
   fs.mkdirSync(destDir, { recursive: true });
 }
 
-if (fs.existsSync(source)) {
-  fs.copyFileSync(source, destination);
-  console.log(`[copy-wasm] Copied ${source} -> ${destination} (${fs.statSync(destination).size} bytes)`);
-} else {
-  console.error(`[copy-wasm] Source wasm not found at: ${source}`);
-  process.exit(1);
+const wasmFiles = ['step0_mock_core.wasm', 'snes_core.wasm'];
+
+for (const file of wasmFiles) {
+  const src = path.join(targetDir, file);
+  const dest = path.join(destDir, file);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, dest);
+    console.log(`[copy-wasm] Copied ${file} -> ${dest} (${fs.statSync(dest).size} bytes)`);
+  }
 }

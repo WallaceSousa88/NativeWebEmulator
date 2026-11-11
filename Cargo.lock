@@ -7,6 +7,13 @@ name = "core-traits"
 version = "0.1.0"
 
 [[package]]
+name = "snes-core"
+version = "0.1.0"
+dependencies = [
+ "core-traits",
+]
+
+[[package]]
 name = "step0-mock-core"
 version = "0.1.0"
 dependencies = [

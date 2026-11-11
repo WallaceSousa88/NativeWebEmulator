@@ -3,4 +3,5 @@ resolver = "2"
 members = [
     "crates/core-traits",
     "crates/step0-mock-core",
+    "crates/snes-core",
 ]

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NativeWebEmulator - Step 0 Pipeline</title>
+    <title>NativeWebEmulator - SNES Core & Pipeline</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -12,10 +12,14 @@
       <header class="app-header">
         <div class="logo">
           <span class="logo-icon">⚡</span>
-          <h1>NativeWebEmulator <span class="tag">Step 0 • Rust Wasm + WebGL2</span></h1>
+          <h1>NativeWebEmulator <span class="tag">Fase 1 • SNES Core (Wasm)</span></h1>
         </div>
         <div class="header-badges">
-          <span class="badge badge-purple">SNES Native Res (256x224)</span>
+          <select id="select-core" class="core-select">
+            <option value="snes">🎮 SNES Core (65c816 + PPU)</option>
+            <option value="step0">🧪 Step 0 (Mock Pattern)</option>
+          </select>
+          <span class="badge badge-purple">256x224 (4:3)</span>
           <span class="badge badge-green" id="fps-badge">60.0 FPS</span>
         </div>
       </header>
@@ -24,14 +28,22 @@
         <div class="viewport-card">
           <div class="canvas-wrapper" id="canvas-container">
             <canvas id="emulator-canvas" width="256" height="224"></canvas>
+            <div id="drop-overlay" class="drop-overlay">
+              <span class="drop-icon">📥</span>
+              <p>Solte a ROM do SNES aqui (.sfc / .smc)</p>
+            </div>
             <div id="audio-overlay" class="audio-overlay">
               <button id="btn-start-audio" class="btn btn-primary">
-                🔊 Clique para Iniciar Áudio & Ativar Loop
+                🔊 Clique para Ativar Áudio & Emulador
               </button>
             </div>
           </div>
 
           <div class="toolbar">
+            <input type="file" id="file-rom" accept=".sfc,.smc,.bin" style="display: none;" />
+            <button id="btn-load-rom" class="btn btn-primary-alt">
+              📂 Carregar ROM (.sfc / .smc)
+            </button>
             <button id="btn-toggle-crt" class="btn btn-secondary">
               📺 CRT Shader: <strong id="crt-status">LIGADO</strong>
             </button>
@@ -45,6 +57,28 @@
         </div>
 
         <aside class="sidebar">
+          <div class="panel">
+            <h3>🎮 Informações do Cartucho (SNES)</h3>
+            <div class="metrics-grid">
+              <div class="metric">
+                <span class="label">Status:</span>
+                <span class="value" id="val-rom-status">Aguardando ROM...</span>
+              </div>
+              <div class="metric">
+                <span class="label">Mapeamento:</span>
+                <span class="value" id="val-rom-type">-</span>
+              </div>
+              <div class="metric">
+                <span class="label">Reset Vector:</span>
+                <span class="value highlight" id="val-reset-vector">-</span>
+              </div>
+              <div class="metric">
+                <span class="label">Tamanho da ROM:</span>
+                <span class="value" id="val-rom-size">-</span>
+              </div>
+            </div>
+          </div>
+
           <div class="panel">
             <h3>📊 Telemetria de Desempenho</h3>
             <div class="metrics-grid">
@@ -66,7 +100,7 @@
               </div>
               <div class="metric">
                 <span class="label">Wasm Heap Buffer:</span>
-                <span class="value" id="val-wasmmem">1.1 MB</span>
+                <span class="value" id="val-wasmmem">-</span>
               </div>
               <div class="metric">
                 <span class="label">Dispositivo de Entrada:</span>
@@ -76,17 +110,16 @@
           </div>
 
           <div class="panel">
-            <h3>🎮 Controles de Validação (Step 0)</h3>
-            <p class="desc">
-              O Wasm processa os botões em tempo real, alterando a cor/posição da sprite e a frequência do oscilador de áudio no AudioWorklet:
-            </p>
+            <h3>🎮 Controles SNES (Mapeamento)</h3>
             <ul class="control-list">
-              <li><kbd>Setas</kbd> / <kbd>W A S D</kbd> : Mover Sprite (D-Pad)</li>
-              <li><kbd>X</kbd> / <kbd>L</kbd> : Botão A (Verde / 880 Hz)</li>
-              <li><kbd>Z</kbd> / <kbd>K</kbd> : Botão B (Vermelho / Turbo / 587 Hz)</li>
-              <li><kbd>C</kbd> / <kbd>I</kbd> : Botão Y (Amarelo / 523 Hz)</li>
-              <li><kbd>V</kbd> / <kbd>O</kbd> : Botão X (Roxo / 659 Hz)</li>
-              <li><span class="tag-sm">Gamepad USB/BT</span> : Mapeamento SNES automático</li>
+              <li><kbd>Setas</kbd> / <kbd>W A S D</kbd> : D-Pad</li>
+              <li><kbd>X</kbd> / <kbd>L</kbd> : Botão A</li>
+              <li><kbd>Z</kbd> / <kbd>K</kbd> : Botão B</li>
+              <li><kbd>C</kbd> / <kbd>I</kbd> : Botão Y</li>
+              <li><kbd>V</kbd> / <kbd>O</kbd> : Botão X</li>
+              <li><kbd>Q</kbd> : Botão L | <kbd>E</kbd> : Botão R</li>
+              <li><kbd>Enter</kbd> : Start | <kbd>Shift</kbd> : Select</li>
+              <li><span class="tag-sm">Gamepad USB/BT</span> : Mapeado nativo</li>
             </ul>
           </div>
         </aside>
