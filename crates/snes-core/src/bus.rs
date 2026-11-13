@@ -16,7 +16,18 @@ pub struct Bus {
     pub joy1_state: u16,
 
     // APU I/O Ports ($2140-$2143)
+    // Inicializado com $AA e $BB (SPC700 Boot Handshake obrigatório para jogos comerciais)
     pub apu_ports: [u8; 4],
+
+    // Hardware Math (Ricoh 5A22 Multiplier / Divider)
+    pub wrmpya: u8,
+    pub wrmpyb: u8,
+    pub wrdiv_dividend: u16,
+    pub wrdiv_divisor: u8,
+    pub rddiv_quotient: u16,
+    pub rdmpy_product_or_remainder: u16,
+
+    pub open_bus: u8,
 }
 
 impl Bus {
@@ -32,7 +43,16 @@ impl Bus {
             vblank_flag: false,
             hblank_flag: false,
             joy1_state: 0,
-            apu_ports: [0; 4],
+            apu_ports: [0xAA, 0xBB, 0x00, 0x00],
+
+            wrmpya: 0xFF,
+            wrmpyb: 0,
+            wrdiv_dividend: 0xFFFF,
+            wrdiv_divisor: 0,
+            rddiv_quotient: 0,
+            rdmpy_product_or_remainder: 0,
+
+            open_bus: 0,
         }
     }
 
@@ -43,13 +63,15 @@ impl Bus {
         self.nmi_flag = false;
         self.vblank_flag = false;
         self.hblank_flag = false;
+        self.apu_ports = [0xAA, 0xBB, 0x00, 0x00];
+        self.open_bus = 0;
     }
 
     // =========================================================================
     // Leitura no Espaço de Endereçamento de 24 Bits ($000000 - $FFFFFF)
     // =========================================================================
     pub fn read_u8(&mut self, bank: u8, addr: u16) -> u8 {
-        match (bank, addr) {
+        let val = match (bank, addr) {
             // WRAM total mapeada em $7E e $7F (128 KB)
             (0x7E, _) => self.wram[addr as usize],
             (0x7F, _) => self.wram[0x10000 + addr as usize],
@@ -74,9 +96,13 @@ impl Bus {
             // Registradores de CPU e Controle ($4200 - $421F)
             (0x00..=0x3F | 0x80..=0xBF, 0x4210) => {
                 // RDNMI: Lê flag NMI (bit 7) e limpa imediatamente
-                let val = if self.nmi_flag { 0x82 } else { 0x02 }; // 5A22 version 2
+                let res = if self.nmi_flag { 0x82 } else { 0x02 };
                 self.nmi_flag = false;
-                val
+                res
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4211) => {
+                // TIMEUP: IRQ status
+                0x00
             }
             (0x00..=0x3F | 0x80..=0xBF, 0x4212) => {
                 // HVBJOY: Status V-Blank (bit 7) e H-Blank (bit 6)
@@ -85,12 +111,26 @@ impl Bus {
                 if self.hblank_flag { status |= 0x40; }
                 status
             }
+
+            // Hardware Math Readouts ($4214 - $4217)
+            (0x00..=0x3F | 0x80..=0xBF, 0x4214) => {
+                (self.rddiv_quotient & 0xFF) as u8
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4215) => {
+                ((self.rddiv_quotient >> 8) & 0xFF) as u8
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4216) => {
+                (self.rdmpy_product_or_remainder & 0xFF) as u8
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4217) => {
+                ((self.rdmpy_product_or_remainder >> 8) & 0xFF) as u8
+            }
+
+            // Auto-Joypad
             (0x00..=0x3F | 0x80..=0xBF, 0x4218) => {
-                // JOY1L (Auto-Joypad 1 low byte)
                 (self.joy1_state & 0xFF) as u8
             }
             (0x00..=0x3F | 0x80..=0xBF, 0x4219) => {
-                // JOY1H (Auto-Joypad 1 high byte)
                 ((self.joy1_state >> 8) & 0xFF) as u8
             }
 
@@ -107,7 +147,7 @@ impl Bus {
                     0x4 => channel.src_bank,
                     0x5 => (channel.byte_count & 0xFF) as u8,
                     0x6 => ((channel.byte_count >> 8) & 0xFF) as u8,
-                    _ => 0,
+                    _ => self.open_bus,
                 }
             }
 
@@ -116,16 +156,21 @@ impl Bus {
                 if let Some(ref cart) = self.cartridge {
                     cart.read(bank, addr)
                 } else {
-                    0
+                    self.open_bus
                 }
             }
-        }
+        };
+
+        self.open_bus = val;
+        val
     }
 
     // =========================================================================
     // Escrita no Espaço de Endereçamento de 24 Bits
     // =========================================================================
     pub fn write_u8(&mut self, bank: u8, addr: u16, val: u8) {
+        self.open_bus = val;
+
         match (bank, addr) {
             // WRAM total em $7E e $7F
             (0x7E, _) => self.wram[addr as usize] = val,
@@ -141,7 +186,7 @@ impl Bus {
                 self.ppu.write_reg(addr, val);
             }
 
-            // APU I/O Ports ($2140 - $2143)
+            // Portas APU I/O ($2140 - $2143): Ecoa o handshake da CPU para liberar o boot
             (0x00..=0x3F | 0x80..=0xBF, 0x2140..=0x2143) => {
                 let idx = (addr - 0x2140) as usize;
                 self.apu_ports[idx] = val;
@@ -150,6 +195,29 @@ impl Bus {
             // CPU Control & DMA ($4200 - $421F)
             (0x00..=0x3F | 0x80..=0xBF, 0x4200) => {
                 self.nmitimen = val;
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4202) => {
+                self.wrmpya = val;
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4203) => {
+                self.wrmpyb = val;
+                self.rdmpy_product_or_remainder = (self.wrmpya as u16) * (self.wrmpyb as u16);
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4204) => {
+                self.wrdiv_dividend = (self.wrdiv_dividend & 0xFF00) | (val as u16);
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4205) => {
+                self.wrdiv_dividend = (self.wrdiv_dividend & 0x00FF) | ((val as u16) << 8);
+            }
+            (0x00..=0x3F | 0x80..=0xBF, 0x4206) => {
+                self.wrdiv_divisor = val;
+                if val == 0 {
+                    self.rddiv_quotient = 0xFFFF;
+                    self.rdmpy_product_or_remainder = self.wrdiv_dividend;
+                } else {
+                    self.rddiv_quotient = self.wrdiv_dividend / (val as u16);
+                    self.rdmpy_product_or_remainder = self.wrdiv_dividend % (val as u16);
+                }
             }
             (0x00..=0x3F | 0x80..=0xBF, 0x420B) => {
                 // MDMAEN: Dispara transferência DMA imediata nos canais ativos
@@ -196,6 +264,14 @@ impl Bus {
         self.write_u8(bank, addr.wrapping_add(1), ((val >> 8) & 0xFF) as u8);
     }
 
+    #[inline(always)]
+    pub fn read_u24(&mut self, bank: u8, addr: u16) -> (u8, u16) {
+        let low = self.read_u8(bank, addr) as u16;
+        let high = self.read_u8(bank, addr.wrapping_add(1)) as u16;
+        let b = self.read_u8(bank, addr.wrapping_add(2));
+        (b, (high << 8) | low)
+    }
+
     // =========================================================================
     // Motor DMA de Uso Geral (Bus A -> Bus B)
     // =========================================================================
@@ -227,6 +303,7 @@ impl Bus {
                     0 => dest_b,
                     1 => dest_b + ((i % 2) as u16),
                     2 => dest_b,
+                    3 | 7 => dest_b + (((i >> 1) % 2) as u16),
                     _ => dest_b + ((i % 4) as u16),
                 };
 

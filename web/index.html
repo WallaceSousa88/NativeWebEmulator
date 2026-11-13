@@ -12,7 +12,7 @@
       <header class="app-header">
         <div class="logo">
           <span class="logo-icon">⚡</span>
-          <h1>NativeWebEmulator <span class="tag">Fase 1 • SNES Core (Wasm)</span></h1>
+          <h1>NativeWebEmulator <span class="tag">SNES Core (65c816 + Wasm + ZIP)</span></h1>
         </div>
         <div class="header-badges">
           <select id="select-core" class="core-select">
@@ -30,7 +30,7 @@
             <canvas id="emulator-canvas" width="256" height="224"></canvas>
             <div id="drop-overlay" class="drop-overlay">
               <span class="drop-icon">📥</span>
-              <p>Solte a ROM do SNES aqui (.sfc / .smc)</p>
+              <p>Solte a ROM aqui (.zip, .sfc, .smc)</p>
             </div>
             <div id="audio-overlay" class="audio-overlay">
               <button id="btn-start-audio" class="btn btn-primary">
@@ -40,9 +40,9 @@
           </div>
 
           <div class="toolbar">
-            <input type="file" id="file-rom" accept=".sfc,.smc,.bin" style="display: none;" />
+            <input type="file" id="file-rom" accept=".zip,.sfc,.smc,.bin" style="display: none;" />
             <button id="btn-load-rom" class="btn btn-primary-alt">
-              📂 Carregar ROM (.sfc / .smc)
+              📂 Carregar ROM (.zip / .sfc / .smc)
             </button>
             <button id="btn-toggle-crt" class="btn btn-secondary">
               📺 CRT Shader: <strong id="crt-status">LIGADO</strong>
@@ -65,6 +65,10 @@
                 <span class="value" id="val-rom-status">Aguardando ROM...</span>
               </div>
               <div class="metric">
+                <span class="label">Arquivo:</span>
+                <span class="value" id="val-rom-name">-</span>
+              </div>
+              <div class="metric">
                 <span class="label">Mapeamento:</span>
                 <span class="value" id="val-rom-type">-</span>
               </div>
@@ -73,8 +77,34 @@
                 <span class="value highlight" id="val-reset-vector">-</span>
               </div>
               <div class="metric">
-                <span class="label">Tamanho da ROM:</span>
+                <span class="label">Tamanho Descomprimido:</span>
                 <span class="value" id="val-rom-size">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>🔍 CPU 65c816 Debug Inspector</h3>
+            <div class="metrics-grid">
+              <div class="metric">
+                <span class="label">PC (Program Counter):</span>
+                <span class="value highlight" id="dbg-pc">$00:0000</span>
+              </div>
+              <div class="metric">
+                <span class="label">Acumulador (A):</span>
+                <span class="value" id="dbg-a">$0000</span>
+              </div>
+              <div class="metric">
+                <span class="label">Índices (X / Y):</span>
+                <span class="value" id="dbg-xy">$0000 / $0000</span>
+              </div>
+              <div class="metric">
+                <span class="label">Pilha (SP) / Flags (P):</span>
+                <span class="value" id="dbg-sp-p">$01FF / $34</span>
+              </div>
+              <div class="metric">
+                <span class="label">Último Opcode / INIDISP:</span>
+                <span class="value" id="dbg-op-disp">$EA / 0x0F</span>
               </div>
             </div>
           </div>
@@ -93,10 +123,6 @@
               <div class="metric">
                 <span class="label">Tempo Wasm Core:</span>
                 <span class="value highlight" id="val-wasmtime">0.15 ms</span>
-              </div>
-              <div class="metric">
-                <span class="label">Alocações GC / Frame:</span>
-                <span class="value success">0 bytes (Zero-Copy)</span>
               </div>
               <div class="metric">
                 <span class="label">Wasm Heap Buffer:</span>

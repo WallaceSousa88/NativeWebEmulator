@@ -199,35 +199,74 @@ export class WebGL2Renderer {
   /**
    * Uploads the pixel data directly from Wasm linear memory without any allocation or copy.
    */
-  public renderFrame(pixelView: Uint8Array, timeSec: number): void {
+  public renderFrame(pixelView: ArrayBufferView, timeSec: number): void {
     const gl = this.gl;
 
-    // Viewport
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    // Garante que o canvas tem tamanho correto no DOM
+    const canvas = gl.canvas as HTMLCanvasElement;
+    const displayW = canvas.clientWidth || canvas.width;
+    const displayH = canvas.clientHeight || canvas.height;
+    if (canvas.width !== displayW || canvas.height !== displayH) {
+      canvas.width = displayW;
+      canvas.height = displayH;
+    }
 
-    // 1. Upload Texture directly using subImage
+    // Viewport cobre todo o canvas
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    // 1. Upload Texture
+    // IMPORTANTE: Se o buffer vem de WebAssembly.Memory com COOP/COEP headers ativos,
+    // ele pode ser um SharedArrayBuffer. Chrome/Firefox ≥ 92 aceitam SAB em texImage2D,
+    // mas para garantir compatibilidade máxima, fazemos uma cópia explícita.
+    let uploadBuffer: Uint8Array;
+    if (pixelView instanceof Uint8Array) {
+      // Verifica se é SAB (SharedArrayBuffer) — se sim, faz cópia
+      if (pixelView.buffer instanceof SharedArrayBuffer) {
+        uploadBuffer = new Uint8Array(pixelView);
+      } else {
+        uploadBuffer = pixelView;
+      }
+    } else {
+      // Converte qualquer ArrayBufferView para Uint8Array
+      uploadBuffer = new Uint8Array(pixelView.buffer, pixelView.byteOffset, pixelView.byteLength);
+    }
+
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.texSubImage2D(
       gl.TEXTURE_2D,
-      0,
-      0,
-      0,
+      0,       // mip level
+      0, 0,    // x, y offset
       this.width,
       this.height,
       gl.RGBA,
       gl.UNSIGNED_BYTE,
-      pixelView
+      uploadBuffer
     );
 
-    // 2. Set Uniforms
+    // Checa erros de upload de textura
+    if (import.meta.env.DEV) {
+      const texErr = gl.getError();
+      if (texErr !== gl.NO_ERROR) {
+        console.error(`[WebGL2] texSubImage2D erro: 0x${texErr.toString(16)} | buffer.byteLength=${uploadBuffer.byteLength}`);
+      }
+    }
+
+    // 2. Set Uniforms + Draw
     gl.useProgram(this.program);
-    gl.uniform2f(this.uResolutionLoc, gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(this.uResolutionLoc, canvas.width, canvas.height);
     gl.uniform2f(this.uTextureSizeLoc, this.width, this.height);
     gl.uniform1i(this.uCrtEnabledLoc, this.crtEnabled ? 1 : 0);
     gl.uniform1f(this.uTimeLoc, timeSec);
 
-    // 3. Draw
+    // 3. Draw full-screen quad
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    if (import.meta.env.DEV) {
+      const drawErr = gl.getError();
+      if (drawErr !== gl.NO_ERROR) {
+        console.error(`[WebGL2] drawArrays erro: 0x${drawErr.toString(16)}`);
+      }
+    }
   }
 }

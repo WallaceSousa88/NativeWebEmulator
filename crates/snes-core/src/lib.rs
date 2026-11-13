@@ -138,3 +138,82 @@ pub extern "C" fn snes_get_rom_type() -> u32 {
 pub extern "C" fn snes_get_rom_reset_vector() -> u16 {
     with_snes(|s| s.rom_header().map(|h| h.reset_vector).unwrap_or(0)).unwrap_or(0)
 }
+
+#[no_mangle]
+pub extern "C" fn snes_get_pc() -> u16 {
+    with_snes(|s| s.cpu.regs.pc).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_pbr() -> u8 {
+    with_snes(|s| s.cpu.regs.pbr).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_dbr() -> u8 {
+    with_snes(|s| s.cpu.regs.dbr).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_a() -> u16 {
+    with_snes(|s| s.cpu.regs.a).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_x() -> u16 {
+    with_snes(|s| s.cpu.regs.x).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_y() -> u16 {
+    with_snes(|s| s.cpu.regs.y).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_sp() -> u16 {
+    with_snes(|s| s.cpu.regs.sp).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_p() -> u8 {
+    with_snes(|s| s.cpu.regs.p).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_inidisp() -> u8 {
+    with_snes(|s| s.bus.ppu.inidisp).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn snes_get_last_opcode() -> u8 {
+    with_snes(|s| s.cpu.last_opcode).unwrap_or(0)
+}
+
+/// Preenche o framebuffer com um padrão colorido de teste (sem necessidade de ROM).
+/// Útil para validar que o pipeline WebGL está funcionando corretamente.
+#[no_mangle]
+pub extern "C" fn snes_render_test_pattern() {
+    with_snes_mut(|s| {
+        let w = ppu::SCREEN_WIDTH;
+        let h = ppu::SCREEN_HEIGHT;
+        for y in 0..h {
+            for x in 0..w {
+                let r = ((x * 255) / w) as u32;
+                let g = ((y * 255) / h) as u32;
+                let b = 128u32;
+                // RGBA8888 little-endian: bytes na memória = [R, G, B, 0xFF]
+                // Mas framebuffer armazena como u32 = 0xFF_BB_GG_RR (little-endian)
+                // Então: bytes = [RR, GG, BB, FF] = [R, G, B, 255]
+                // bgr555_to_rgba retorna: 0xFF000000 | (B<<16) | (G<<8) | R
+                // Que em memória LE fica: [R, G, B, 0xFF] → correto para WebGL RGBA
+                s.bus.ppu.framebuffer[y * w + x] = 0xFF000000 | (b << 16) | (g << 8) | r;
+            }
+        }
+    });
+}
+
+/// Retorna 1 se a ROM estiver carregada, 0 caso contrário.
+#[no_mangle]
+pub extern "C" fn snes_is_rom_loaded() -> u32 {
+    with_snes(|s| s.bus.cartridge.is_some() as u32).unwrap_or(0)
+}

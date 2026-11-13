@@ -29,7 +29,7 @@ export class AudioController {
     }
   }
 
-  public pushSamples(interleavedSamples: Float32Array): void {
+  public pushSamples(interleavedSamples: Float32Array<ArrayBufferLike>): void {
     if (!this.initialized || !this.workletNode || this.isMuted) return;
     if (interleavedSamples.length === 0) return;
 
